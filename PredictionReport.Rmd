@@ -1,0 +1,91 @@
+---
+title: "Prediction Assigment Report"
+author: "Maria Mezquita"
+date: "2025-06-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## BACKGROUND
+
+Using devices such as *Jawbone Up*, *Nike FuelBand*, and *Fitbit* it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how *much* of a particular activity they do, but they rarely quantify *how well they do it*. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+## DATA
+
+The training data for this project are available here:
+
+[[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv]{.underline}](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+The test data are available here:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+
+The data for this project come from this source: <http://groupware.les.inf.puc-rio.br/har>. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+## Importing and processing data
+
+```{#Loading required packages, importing, cleaning and processing data}
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(ggplot2)
+
+trainingData <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testingData <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+training <- read.csv(url(trainingData), na.strings=c("NA","#DIV/0!",""))  
+testing <- read.csv(url(testingData), na.strings=c("NA","#DIV/0!",""))
+
+#Removing unecessary columns and missing values from datasets
+training <- training[,colSums(is.na(training)) == 0]
+testing <- testing[,colSums(is.na(testing)) == 0]
+training <- training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+
+#Data partitioning for out-of-sample error purposes. Training data divided into two subsets.
+
+set.seed(1234)
+inTrain <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+mytraining <- training[inTrain, ]
+mytesting <- training[-inTrain, ]
+```
+
+## Prediction Models
+
+The first prediction model used and plotted below is the **decision tree**.
+
+```{model <- rpart(classe ~ ., data=mytraining, method="class")}
+prediction <- predict(model, mytesting, type = "class")
+confusionMatrix(prediction, mytesting$classe)
+```
+
+![](images/clipboard-3785686767.png){width="16.7cm"}
+
+The second prediction model used and plotted below is the **random forest**.
+
+```         
+#Using prediction algorithm in the ramdon forest to predict class in validation set and estimate the errors
+randomForestModel <- randomForest(classe ~. , data = mytraining, method = "class")
+randomForestPrediction <- predict(randomForestModel, mytesting, type = "class")
+
+confusionMatrix(randomForestPrediction, mytesting$classe)
+
+#Testing the model to predict 20 different test cases
+
+finalprediction <- predict(randomForestModel, mytesting, type = "class")
+finalprediction
+
+##  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 
+##  B  A  B  A  A  E  D  B  A  A  B  C  B  A  E  E  A  B  B  B 
+## Levels: A B C D E
+```
+
+## FINAL RESULT
+
+After comparing both algorithms, decision tree and random forest, given the accuracy of both tests, the random forest model was chosen. Under the final prediction section, we used 20 cases as test data where none to few of the samples would be miss-classified given the high accuracy obtained during the cross-validation.
